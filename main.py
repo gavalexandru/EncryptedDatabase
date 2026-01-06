@@ -24,6 +24,67 @@ def add(file_path, crypto, db):
     except Exception as e:
         print(f"[EROARE] A apărut o problema neprevazuta la adaugarea fisierului criptat: {file_path} in baza de date: {e}")
 
+def read(file_path, crypto, db):
+    matches = db.find_all_matches(file_path)
+
+    if not matches:
+        print(f"[EROARE] Nu a fost gasit niciun fisier cu numele: {file_path} pentru a-l putea decripta.")
+    elif len(matches) == 1:
+        pwd = input("Parola pentru decriptare: ")
+        vault_file = os.path.join(db.vault_path, matches[0]['encrypted_name'])
+
+        with open(vault_file, "rb") as f:
+            enc_data = f.read()
+        
+        try:
+            decrypted_bytes = crypto.decrypt_data(enc_data, pwd)
+            
+            file_id = matches[0]['uid']
+            original_name = os.path.basename(matches[0]['filename'])
+                        
+            recovered_filename = f"restored_{file_id}_{original_name}"
+            
+            with open(recovered_filename, "wb") as f:
+                f.write(decrypted_bytes)
+            
+            print(f"[OK] Fisierul a fost refacut cu numele: {recovered_filename}")
+        except Exception:
+            print("[EROARE] Parola incorecta sau fisier corupt.")
+    else:
+        print(f"[!] Mai multe fisiere gasite. Pe care doresti sa il citesti?")
+
+        for file in matches:
+            print(f" -> ({file['uid']}) Locatie originala: {file['filename']}")
+
+        try:
+            choice = int(input("Introdu UID-ul fisierului ales: "))
+
+            for file in matches:
+                if file['uid'] == choice:
+                    pwd = input("Parola pentru decriptare: ")
+                    vault_file = os.path.join(db.vault_path, file['encrypted_name'])
+                    
+                    with open(vault_file, "rb") as f:
+                        enc_data = f.read()
+
+                    try:
+                        decrypted_bytes = crypto.decrypt_data(enc_data, pwd)
+            
+                        file_id = file['uid']
+                        original_name = os.path.basename(file['filename'])
+                        
+                        recovered_filename = f"restored_{file_id}_{original_name}"
+            
+                        with open(recovered_filename, "wb") as f:
+                            f.write(decrypted_bytes)
+            
+                        print(f"[OK] Fisierul a fost refacut cu numele: {recovered_filename}")
+                    except Exception:
+                        print("[EROARE] Parola incorecta sau fisier corupt.")
+
+                    break
+        except ValueError:
+            print(f"UID-ul fisierului ales nu exista.")
 
 def main():
     db = DatabaseManager()
@@ -44,8 +105,14 @@ def main():
     else:
         print("[INFO] Cheile RSA au fost detectate.")
 
-    file = input("Introdu numele unui fisier: ")
-    add(file,crypto,db)
+    choice = input("Alege optiunea 1/2: ")
+
+    if int(choice) == 1:
+        file = input("Introdu numele fisierului pentru criptare: ")
+        add(file,crypto,db)
+    else:
+        file = input("Introdu numele fisierului pentru decriptare: ")
+        read(file,crypto,db)
 
 if __name__ == "__main__":
     main()

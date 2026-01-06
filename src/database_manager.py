@@ -44,5 +44,18 @@ class DatabaseManager:
 
         with open(self.metadata_file, "w") as f:
             json.dump(data, f, indent=4)
-            
+
         return uid
+    
+    def find_all_matches(self, search_name):
+        with open(self.metadata_file, "r") as f:
+            data = json.load(f)
+
+        results = [] 
+
+        for entry in data["files"]: 
+            file_name = os.path.basename(entry["filename"]) 
+            if file_name == search_name:
+                results.append(entry)
+            
+        return results

@@ -72,3 +72,26 @@ class CryptoManager:
             encrypted_chunks.append(enc_chunk)
         
         return b"".join(encrypted_chunks)
+    
+    def decrypt_data(self, ciphertext, password):
+        with open(self.private_key_path, "rb") as f:
+            private_key = serialization.load_pem_private_key(
+                f.read(), 
+                password=password.encode()
+            )
+        chunk_size = 256  
+        decrypted_chunks = []
+
+        for i in range(0, len(ciphertext), chunk_size):
+            chunk = ciphertext[i : i + chunk_size]
+            dec_chunk = private_key.decrypt(
+                chunk,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
+            )
+            decrypted_chunks.append(dec_chunk)
+
+        return b"".join(decrypted_chunks)
