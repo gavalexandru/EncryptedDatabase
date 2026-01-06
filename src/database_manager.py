@@ -24,3 +24,25 @@ class DatabaseManager:
         metadata_exists = os.path.exists(self.metadata_file)
         
         return vault_exists and metadata_exists
+    
+    def add_file_entry(self, filename, encrypted_name, key_id):
+        with open(self.metadata_file, "r") as f:
+            data = json.load(f)
+
+        uid = data.get("next_id", 1)
+        
+        new_entry = {
+            "uid": uid,
+            "filename": os.path.abspath(filename), 
+            "encrypted_name": encrypted_name,
+            "encryption_method": "RSA-2048-OAEP",
+            "key_id": key_id
+        }
+
+        data["files"].append(new_entry)
+        data["next_id"] = uid + 1
+
+        with open(self.metadata_file, "w") as f:
+            json.dump(data, f, indent=4)
+            
+        return uid

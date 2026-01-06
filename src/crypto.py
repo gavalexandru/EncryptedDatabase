@@ -1,6 +1,8 @@
 import os 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 class CryptoManager:
     def __init__(self, keys_dir="keys"):
@@ -49,3 +51,24 @@ class CryptoManager:
             return True
         except Exception:
             return False
+        
+    def encrypt_data(self, plaintext_bytes):
+        with open(self.public_key_path, "rb") as f:
+            public_key = serialization.load_pem_public_key(f.read())
+
+        chunk_size = 190  
+        encrypted_chunks = []
+
+        for i in range(0, len(plaintext_bytes), chunk_size):
+            chunk = plaintext_bytes[i : i + chunk_size]
+            enc_chunk = public_key.encrypt(
+                chunk,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
+            )
+            encrypted_chunks.append(enc_chunk)
+        
+        return b"".join(encrypted_chunks)
