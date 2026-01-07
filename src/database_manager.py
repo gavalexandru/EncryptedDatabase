@@ -59,3 +59,33 @@ class DatabaseManager:
                 results.append(entry)
             
         return results
+    
+    def delete_by_uid(self, uid):
+        with open(self.metadata_file, "r") as f:
+            data = json.load(f)
+
+        target = None
+
+        for entry in data["files"]: 
+            if entry["uid"] == uid:
+                target = entry
+                break 
+
+        if target is None:
+            return False
+
+        path = os.path.join(self.vault_path, target["encrypted_name"])
+        if os.path.exists(path):
+            os.remove(path)
+
+        updated_files = []
+        for file_entry in data["files"]:
+            if not (file_entry["uid"] == uid):
+                updated_files.append(file_entry)
+
+        data["files"] = updated_files
+        
+        with open(self.metadata_file, "w") as f:
+            json.dump(data, f, indent=4)
+
+        return True

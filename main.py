@@ -22,7 +22,7 @@ def add(file_path, crypto, db):
         uid = db.add_file_entry(file_path, encrypted_filename, "RSA_KEY_2048")
         print(f"[OK] Fisier securizat cu succes. ID: ({uid})")
     except Exception as e:
-        print(f"[EROARE] A apărut o problema neprevazuta la adaugarea fisierului criptat: {file_path} in baza de date: {e}")
+        print(f"[EROARE] A aparut o problema neprevazuta la adaugarea fisierului criptat: {file_path} in baza de date: {e}")
 
 def read(file_path, crypto, db):
     matches = db.find_all_matches(file_path)
@@ -58,9 +58,11 @@ def read(file_path, crypto, db):
 
         try:
             choice = int(input("Introdu UID-ul fisierului ales: "))
-
+            found = False
+            
             for file in matches:
                 if file['uid'] == choice:
+                    found = True
                     pwd = input("Parola pentru decriptare: ")
                     vault_file = os.path.join(db.vault_path, file['encrypted_name'])
                     
@@ -83,8 +85,54 @@ def read(file_path, crypto, db):
                         print("[EROARE] Parola incorecta sau fisier corupt.")
 
                     break
+        
+            if not found:
+                print(f"[EROARE] ID-ul {choice} nu se afla in lista de rezultate.")
         except ValueError:
-            print(f"UID-ul fisierului ales nu exista.")
+            print(f"[EROARE] Te rugam sa introduci un numar valid pentru UID.")
+
+def delete(file_path, crypto, db):
+    matches = db.find_all_matches(file_path)
+
+    if not matches:
+        print(f"[EROARE] Nu a fost gasit niciun fisier cu numele: {file_path} pentru a-l putea sterge.")
+    elif len(matches) == 1:
+        pwd = input("Parola pentru a sterge fisierul: ")
+        
+        if crypto.validate_password(pwd):
+            if db.delete_by_uid(matches[0]['uid']):
+                print(f"[OK] Fisierul a fost eliminat definitiv.")
+        else:
+            print("[EROARE] Parola incorecta. Stergerea a fost refuzata.")
+
+    else:
+        print(f"[!] Mai multe fisiere gasite. Pe care doresti sa il stergi?")
+
+        for file in matches:
+            print(f" -> ({file['uid']}) Locatie originala: {file['filename']}")
+
+        try:
+            choice = int(input("Introdu UID-ul fisierului ales: "))
+            found = False 
+
+            for file in matches:
+                if file['uid'] == choice:
+                    found = True
+                    pwd = input("Parola pentru a sterge fisierul: ")
+                    
+                    if crypto.validate_password(pwd):
+                        if db.delete_by_uid(file['uid']):
+                            print(f"[OK] Fisierul a fost eliminat definitiv.")
+                    else:
+                        print("[EROARE] Parola incorecta. Stergerea a fost refuzata.")
+
+                    break
+
+            if not found:
+                print(f"[EROARE] ID-ul {choice} nu se afla in lista de rezultate.")
+        except ValueError:
+            print(f"[EROARE] Te rugam sa introduci un numar valid pentru UID.")
+
 
 def main():
     db = DatabaseManager()
@@ -105,14 +153,17 @@ def main():
     else:
         print("[INFO] Cheile RSA au fost detectate.")
 
-    choice = input("Alege optiunea 1/2: ")
+    choice = input("Alege optiunea 1 || 2 || 3: ")
 
     if int(choice) == 1:
         file = input("Introdu numele fisierului pentru criptare: ")
         add(file,crypto,db)
-    else:
+    elif int(choice) == 2:
         file = input("Introdu numele fisierului pentru decriptare: ")
         read(file,crypto,db)
+    else:
+        file = input("Introdu numele fisierului pentru stergere: ")
+        delete(file,crypto,db)
 
 if __name__ == "__main__":
     main()
